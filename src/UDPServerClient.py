@@ -1,4 +1,4 @@
-#cs410 mp1
+#cs425 mp1
 import socket
 import threading
 import sys
