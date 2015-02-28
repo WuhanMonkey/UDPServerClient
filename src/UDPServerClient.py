@@ -7,7 +7,7 @@ import Queue, random, time
 from threading import Timer
 from Queue import PriorityQueue
 
-# Buffer of Priority Queues, append if new host found
+# Hashtable of Priority Queues, append if new host found
 msgQueue = {}
 counter = 0
 exitFlag = False
@@ -68,9 +68,8 @@ class UDPServerClient:
                 if not msg:
                     break
                
-                # Buffer of Priority Queues, append if new host found
-                global msgQueue
-                global counter
+                global msgQueue # Hashtable of Priority Queues
+                global counter  # Used in PriorityQueue internally to resolve ties
                 global exitFlag
 
                 # Do not handle until popped off of priority queue
@@ -80,16 +79,12 @@ class UDPServerClient:
                 else:
                     q = msgQueue[recv_port]
 
-                #print 'Processing Message, %s\n' % (msgQueue[recv_port].queue)
-
-                ## @TODO[Kelsey] Check if python's PriorityQueue() handles sorting by default
                 counter+=1
                 q.put((time.time() + random.randrange(0, int(self.Max_delay)), counter, msg, self.Max_delay, recv_port))
                 # Checks the queue perodically
                 Timer(0.5, self.checkAck, ()).start()
 
         def checkAck(self):
-            ## @TODO[Kelsey] currently vulnerable to overflow of messages, fix via multi message handling
             processQueue = PriorityQueue();
             for k in msgQueue:
                 if msgQueue[k].empty() == True:
