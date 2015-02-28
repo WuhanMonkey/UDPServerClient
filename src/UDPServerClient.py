@@ -97,9 +97,10 @@ class UDPServerClient:
                 if msgQueue[k].empty() == True:
                     continue
                 q = msgQueue[k]
-                if minTime == None or minTime < msgQueue[k].queue[0]:
-                    minTime = msgQueue[k].queue[0]
-                    cIdx = k
+                if (msgQueue[k].queue[0])[0] <= time.time():
+                    if minTime == None or minTime[0] < (msgQueue[k].queue[0])[0]:
+                        minTime = msgQueue[k].queue[0]
+                        cIdx = k
 
             if minTime != None:
                 msgTuple = msgQueue[cIdx].get()
@@ -108,9 +109,10 @@ class UDPServerClient:
                 delay = msgTuple[3]
                 print 'Received %s port %s, Max delay is %s' % (msg, recv_port, delay) #self.Max_delay
                 print 'UDP Server Client> Enter message to send:'
-                if exitFlag == False:
-                    Timer(0.5, self.checkAck, ()).start()
-                    time.sleep(0.55)
+            
+            if exitFlag == False:
+                Timer(0.5, self.checkAck, ()).start()
+                #time.sleep(0.55)
               
         def send(self):
             global exitFlag
