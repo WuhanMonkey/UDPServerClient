@@ -84,35 +84,32 @@ class UDPServerClient:
 
                 ## @TODO[Kelsey] Check if python's PriorityQueue() handles sorting by default
                 counter+=1
-                q.put((time.time() + random.randrange(0, int(self.Max_delay)), counter, msg, self.Max_delay))
+                q.put((time.time() + random.randrange(0, int(self.Max_delay)), counter, msg, self.Max_delay, recv_port))
                 # Checks the queue perodically
                 Timer(0.5, self.checkAck, ()).start()
 
         def checkAck(self):
             ## @TODO[Kelsey] currently vulnerable to overflow of messages, fix via multi message handling
-            #print 'Checking Message\n'
-            minTime = None
-            cIdx = None
+            processQueue = PriorityQueue();
             for k in msgQueue:
                 if msgQueue[k].empty() == True:
                     continue
                 q = msgQueue[k]
                 if (msgQueue[k].queue[0])[0] <= time.time():
-                    if minTime == None or minTime[0] < (msgQueue[k].queue[0])[0]:
-                        minTime = msgQueue[k].queue[0]
-                        cIdx = k
+                    processQueue.put(msgQueue[k].get())
 
-            if minTime != None:
-                msgTuple = msgQueue[cIdx].get()
-                msg = msgTuple[2]
-                recv_port = cIdx
-                delay = msgTuple[3]
-                print 'Received %s port %s, Max delay is %s' % (msg, recv_port, delay) #self.Max_delay
+            if processQueue.qsize() > 0:
+                while processQueue.empty() == False:
+                    msgTuple = processQueue.get()
+                    msg = msgTuple[2]
+                    recv_port = msgTuple[4]
+                    delay = msgTuple[3]
+                    print 'Received %s port %s, Max delay is %s' % (msg, recv_port, delay) #self.Max_delay
                 print 'UDP Server Client> Enter message to send:'
             
             if exitFlag == False:
                 Timer(0.5, self.checkAck, ()).start()
-                #time.sleep(0.55)
+                time.sleep(0.55)
               
         def send(self):
             global exitFlag
