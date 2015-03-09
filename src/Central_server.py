@@ -75,11 +75,13 @@ class Central_server(object):
 
                     if (msg[0] == 'ack'):
                         ack_counter=ack_counter-1
-                self.t_listen=threading.Thread(target=self.listen)
-                self.t_send=threading.Thread(target=self.send)
                 print "Central Server> Server Acknowledged. Central server is ready to use."
-               
-                         
+                
+        
+        def start(self):       
+            self.t_listen=threading.Thread(target=self.listen)
+            self.t_send=threading.Thread(target=self.send)
+                      
         def listen(self):
             while True:
                 message, addr = self.s_listen.recvfrom(1024)
@@ -132,3 +134,4 @@ if __name__ == '__main__':
             sys.argv.append(raw_input('Central Server> Please choose the consistency model:\n 1.Linearizability\n 2.Sequential consistency\n 3.Eventual consistency, W=1, R=1\n 4.Eventual consistency, W=2, R=2\n Central Server>'))
     #print sys.argv[1]
     usc = Central_server(sys.argv[1])
+    usc.start()
