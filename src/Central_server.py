@@ -80,8 +80,10 @@ class Central_server(object):
         
         def start(self):       
             self.t_listen=threading.Thread(target=self.listen)
+            self.t_listen.start()
             self.t_send=threading.Thread(target=self.send)
-                      
+            self.t_send.start()          
+        
         def listen(self):
             while True:
                 message, addr = self.s_listen.recvfrom(1024)
