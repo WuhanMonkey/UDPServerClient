@@ -55,7 +55,7 @@ class Central_server(object):
                 print "Central Server> The port of server_b is:",self.server_b
                 print "Central Server> The port of server_c is:",self.server_c
                 print "Central Server> The port of server_d is:",self.server_d
-                admin_msg = "admin model"
+                admin_msg = "admin_model"
                 admin_msg = admin_msg +' '+ self.model+' '+self.p
                 #below we send the model information to all the servers and wait for the ack.
                 self.s_listen=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
