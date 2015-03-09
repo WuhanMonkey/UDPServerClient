@@ -129,6 +129,7 @@ class Central_server(object):
                     continue
                 if message:
                     for s in self.server_list:
+                        print 'hello sucker'
                         self.s_send.sendto(message, (self.h, int(s)))
                 
 
