@@ -30,11 +30,16 @@ class UDPServerClient:
             except IOError:
                 print "Error: can\'t find Configuration file"         
             else:
-                port = file.readline()    
-                port = port.split("=")
-                port = port[1].strip()
-                self.p = port
-                print "The UDP Server had been configured to Port:",port
+                # @TODO[Kelsey] Presumes config file in format "CENTRAL= xxxx, correct for
+                # when central server is written
+                #central_server = file.readline()
+                #central_server = central_server.split("=")
+                #central_server = central_server[1].strip()
+                #self.c = central_server
+                #print "UDP Server Client> The UDP Server has been configured to central server:", central_server
+
+                t = file.readline()
+                
                 max_delay = file.readline()    
                 max_delay = max_delay.split("=")
                 max_delay = max_delay[1].strip()
@@ -46,13 +51,13 @@ class UDPServerClient:
                 self.h = host
                 print "UDP Server Client> The UDP Server had been configured to host:",host
 
-                # @TODO[Kelsey] Presumes config file in format "CENTRAL= xxxx, correct for
-                # when central server is written
-                central_server = file.readline()
-                central_server = central_server.split("=")
-                central_server = central_server[1].strip()
-                self.c = central_server
-                print "UDP Server Client> The UDP Server has been configured to central server:", central_server
+                t = file.readline()
+
+                port = file.readline()    
+                port = port.split("=")
+                port = port[1].strip()
+                self.p = port
+                print "The UDP Server had been configured to Port:",port
 
                 self.s_listen=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.s_send=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -71,13 +76,21 @@ class UDPServerClient:
                 msg = msg.split()
                 msg_size = len(msg)
                 recv_port = msg[msg_size-1]
+
+                #print msg
+                mt = msg #msg.split(" ")
+                if mt[0] == 'admin_model':
+                    self.c = mt[2]
+                    ackMsg = 'ack ' + self.p
+                    self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+
                 msg[msg_size-1]=':'
                 msg[msg_size-2]='from'
                 msg = ' '.join(msg)
 
                 if not msg:
                     break
-               
+
                 global msgQueue # Hashtable of Priority Queues
                 global counter
                 global exitFlag
@@ -124,14 +137,14 @@ class UDPServerClient:
                     var = msgM[1]
                     val = msgM[2]
 
-                    if cmd != 'ack' and cmd != 'Ack':
-                        if cmd == 'Write' or cmd == 'write':
+                    #if cmd != 'ack' and cmd != 'Ack':
+                    if cmd == 'Write' or cmd == 'write':
                             data[var] = val
-                        if cmd == 'Read' or cmd == 'read':
+                    if cmd == 'Read' or cmd == 'read':
                             # @TODO[Kelsey] Check if sending back to central server is needed
                             print 'Variable %s has value %s' % (var, data[var])
-                        ackMsg = 'ack 0 ' + self.c
-                        self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+                        #ackMsg = 'ack 0 ' + self.c
+                        #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
 
                 print 'UDP Server Client> Enter message to send:'
             

@@ -55,6 +55,7 @@ class Central_server(object):
                 print "Central Server> The port of server_b is:",self.server_b
                 print "Central Server> The port of server_c is:",self.server_c
                 print "Central Server> The port of server_d is:",self.server_d
+
                 admin_msg = "admin_model"
                 admin_msg = admin_msg +' '+ self.model+' '+self.p
                 #below we send the model information to all the servers and wait for the ack.
@@ -70,7 +71,9 @@ class Central_server(object):
                     msg, addr = self.s_listen.recvfrom(1024)
                     if not msg:
                         continue
-                    if (msg == 'ack'):
+                    msg=msg.split(" ")
+
+                    if (msg[0] == 'ack'):
                         ack_counter=ack_counter-1
                 self.t_listen=threading.Thread(target=self.listen)
                 self.t_send=threading.Thread(target=self.send)
