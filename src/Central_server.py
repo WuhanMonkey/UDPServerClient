@@ -87,6 +87,7 @@ class Central_server(object):
         def listen(self):
             while True:
                 message, addr = self.s_listen.recvfrom(1024)
+                print message
                 if not message:
                     continue
                 #handle acks probably
@@ -128,7 +129,7 @@ class Central_server(object):
                     continue
                 if message:
                     for s in self.server_list:
-                        self.s_send.sendto(message+' '+str(addr[1]), (self.h, int(s)))
+                        self.s_send.sendto(message, (self.h, int(s)))
                 
 
 if __name__ == '__main__':   
