@@ -95,7 +95,7 @@ class UDPServerClient:
 
                 #print msg
                 mt = msg #msg.split(" ")
-                if mt[0] == 'admin_model':
+                if mt[0].lower() == 'admin_model':
                     self.model = mt[1]
                     print self.model
                     self.c = mt[2]
@@ -151,14 +151,18 @@ class UDPServerClient:
                     #print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
 
                     # (cmd, var, val)
-                    cmd = msgM[0]
+                    cmd = msgM[0].lower()
                     var = msgM[1]
                     val = msgM[2]
 
                     #if cmd != 'ack' and cmd != 'Ack':
                     if cmd == 'insert' or cmd == 'update':
-                        if cmd != 'update' or not(var in data):
+                        if not (cmd == 'update' and not var in data):
                             data[var] = val
+                            print 'Value %s written to variable %s' % (data[var], var)
+                        else:
+                            print 'Variable %s does not exist, so no update done' % var
+
                     if (cmd == 'get') and recv_port == self.p:
                             # @TODO[Kelsey] Check if sending back to central server is needed
                             if var in data:
@@ -169,10 +173,11 @@ class UDPServerClient:
                         #ackMsg = 'ack 0 ' + self.c
                         #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
                     if cmd == 'delete':
-                        try:
-                            del data[var]
-                        except KeyError:
-                            pass
+                        if var in data:
+                            try:
+                                del data[var]
+                            except KeyError:
+                                pass
                 print 'UDP Server Client> Enter message to send:'
             
             if exitFlag == False:
@@ -184,11 +189,13 @@ class UDPServerClient:
 
             while True:
                 msg=raw_input('UDP Server Client> Enter message to send:\n')
+                if msg.lower() != 'send':
+                    msg = msg + ' 0 0 0'
                 msg = msg.split()
-                if msg[1] == 'get' and self.model == 2:
+                if msg[1].lower() == 'get' and self.model == 2:
                     print 'Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
                 else:
-                    if(msg[0]== 'Send' or msg[0] == 'send'):
+                    if(msg[0].lower() == 'send'):
                         msg_size = len(msg)
                         send_port = msg[msg_size-1]            
                         for i in range (0, msg_size-1):
@@ -201,7 +208,7 @@ class UDPServerClient:
                          self.s_send.sendto(msg, (self.h, int(send_port)))
                         except socket.error, msg:
                           print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
-                    elif(msg[0]== 'Stop' or msg[0] == 'stop'):
+                    elif(msg[0].lower() == 'stop'):
                         #print "UDP Server Client will now exit"
                         self.s_listen.close()
                         self.s_send.close()
@@ -209,8 +216,9 @@ class UDPServerClient:
                         exitFlag = True
                         break
                         #sys.exit(0)
-                    elif(msg[0] == 'Help' or msg[0] == 'help'):
-                        print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
+                    elif(msg[0].lower() == 'help'):
+                        print "Use the format (Send/Stop) (Message Contents) (Port Number)"
+                        print "Message Contents is in format (Command) (Variable) (Value)\n"
                     else: 
                         print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
                 
