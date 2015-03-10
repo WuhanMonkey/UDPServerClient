@@ -64,9 +64,10 @@ class UDPServerClient:
                 t = lastPort
                 lastPort = lastPort.split('=')
                 lastPort = lastPort[1].strip()
-                if int(lastPort) > 9014:
-                    print "Warning: Port # exceeded 9014 and will be unnoticed by Central Server:", self.p
-                self.p = str(int(lastPort)+1)
+                if int(lastPort) > 9013:
+                    self.p = '9011'
+                else:
+                    self.p = str(int(lastPort)+1)
                 print "The UDP Server had been configured to Port:",self.p
                 t = t.replace(t, 'PORT= ' + self.p)
                 s=open("config.txt", 'w')
@@ -155,14 +156,23 @@ class UDPServerClient:
                     val = msgM[2]
 
                     #if cmd != 'ack' and cmd != 'Ack':
-                    if cmd == 'Write' or cmd == 'write':
+                    if cmd == 'insert' or cmd == 'update':
+                        if cmd != 'update' or not(var in data):
                             data[var] = val
-                    if (cmd == 'Read' or cmd == 'read') and recv_port == self.p:
+                    if (cmd == 'get') and recv_port == self.p:
                             # @TODO[Kelsey] Check if sending back to central server is needed
-                            print 'Variable %s has value %s' % (var, data[var])
+                            if var in data:
+                                print 'Variable %s has value %s' % (var, data[var])
+                            else:
+                                print "Var doesn't exist in local replica"
+
                         #ackMsg = 'ack 0 ' + self.c
                         #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
-
+                    if cmd == 'delete':
+                        try:
+                            del data[var]
+                        except KeyError:
+                            pass
                 print 'UDP Server Client> Enter message to send:'
             
             if exitFlag == False:
@@ -175,7 +185,7 @@ class UDPServerClient:
             while True:
                 msg=raw_input('UDP Server Client> Enter message to send:\n')
                 msg = msg.split()
-                if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
+                if msg[1] == 'get' and self.model == 2:
                     print 'Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
                 else:
                     if(msg[0]== 'Send' or msg[0] == 'send'):
@@ -192,13 +202,13 @@ class UDPServerClient:
                         except socket.error, msg:
                           print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
                     elif(msg[0]== 'Stop' or msg[0] == 'stop'):
-                #    print "UDP Server Client will now exit"
+                        #print "UDP Server Client will now exit"
                         self.s_listen.close()
                         self.s_send.close()
                         print "Socket closed"
                         exitFlag = True
                         break
-                #    sys.exit(0)
+                        #sys.exit(0)
                     elif(msg[0] == 'Help' or msg[0] == 'help'):
                         print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
                     else: 
