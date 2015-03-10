@@ -139,7 +139,6 @@ class UDPServerClient:
                     var = msgM[1]
                     val = msgM[2]
 
-                    #if cmd != 'ack' and cmd != 'Ack':
                     if cmd == 'insert' or cmd == 'update':
                         if not (cmd == 'update' and not var in data):
                             data[var] = val
@@ -150,12 +149,14 @@ class UDPServerClient:
                     if (cmd == 'get') and recv_port == self.p:
                             # @TODO[Kelsey] Send value & ack to Central Server (don't print locally)
                             if var in data:
+                                # example code 
+                                # ackMsg = 'ack ' + var + ' ' + data[var] + ' ' + self.c
                                 print 'Variable %s has value %s' % (var, data[var])
                             else:
+                                # example code
+                                # ackMsg = 'ack ' + var + ' none ' + self.c
                                 print "Var doesn't exist in local replica"
-
-                        #ackMsg = 'ack 0 ' + self.c
-                        #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+                            #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
                     if cmd == 'delete':
                         if var in data:
                             try:
