@@ -1,16 +1,12 @@
 import socket
 import threading
 import sys
+p = 123
+msg = 'get 3'
+msg = msg+' '+str(p)
+print msg
 
-msg=raw_input('Enter message to send:')
 msg = msg.split()
 msg_size = len(msg)
-print msg_size
-    
-print msg[msg_size-1]
-
-for i in range (0, msg_size-1):
-    msg[i] = msg[i+1]
-msg = ' '.join(msg)
-
-print msg
+recv_port = msg[msg_size-1]
+print recv_port

@@ -49,14 +49,22 @@ class UDPServerClient:
                 t = lastPort
                 lastPort = lastPort.split('=')
                 lastPort = lastPort[1].strip()
-                if int(lastPort) > 9013:
-                    self.p = '9011'
+                if int(lastPort) > 9003:
+                    self.p = '9001'
                 else:
                     self.p = str(int(lastPort)+1)
                 print "The UDP Server had been configured to Port:",self.p
                 t = t.replace(t, 'PORT= ' + self.p)
-                s=open("config.txt", 'w')
-                t = 'PORT_NUMBER= 9029\nMAX_DELAY= 5\nHOST= localhost\nSERVER_LIST=9011,9012,9013,9014\n' + t
+                x=open("config.txt", 'r')
+                t1 = x.readline()
+                t2 = x.readline()
+                t3 = x.readline()
+                t4 = x.readline()
+                x.close()
+                t = t1 + t2 + t3 + t4 + t
+                print t
+                open('config.txt', 'w').close()
+                s=open("config.txt", 'a')
                 s.write(t)
                 s.close()
 
@@ -117,6 +125,7 @@ class UDPServerClient:
                 if msgQueue[k].empty() == True:
                     continue
                 q = msgQueue[k]
+                # @TODO[Kelsey] Might be here (out of order processing from input file
                 if (msgQueue[k].queue[0])[0] + (msgQueue[k].queue[0])[3] <= time.time():
                     job = msgQueue[k].get()
                     processQueue.put((job[3], job[0], job[2], job[4]))  #randDelay, sysTime, msg, recv_port
@@ -132,7 +141,7 @@ class UDPServerClient:
                     print 'Received %s port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
 
                     msgM = msg.split(" ")
-                    #print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
+                    print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
 
                     # (cmd, var, val)
                     cmd = msgM[0].lower()
@@ -163,137 +172,77 @@ class UDPServerClient:
                                 del data[var]
                             except KeyError:
                                 pass
-                print 'UDP Server Client> Enter message to send:'
+                print 'UDP Server Client> Enter input file:'
             
             if exitFlag == False:
                 Timer(0.5, self.checkAck, ()).start()
                 time.sleep(0.55)
               
         def send(self):
-
             global exitFlag
-
             input_flag = True
-
             while input_flag:
-
                 msg=raw_input('UDP Server Client> Enter input file:')
-
                 try: 
-
                     input_file=open(msg,'r')
-
                 except IOError:
-
                     print "UDP Server Client> Error: can\'t find the input file" 
-
                 else: 
-
                     input_flag = False
-
             print "UDP Server Client> Input file load success!"
-
             
-
-                
-
             while True:
-
                 msg = input_file.readline()
-
                 if(msg ==''):
-
                     print 'UDP Server Client> command finished'
-
                     break
-
-                
-
                 msg_sp = msg.split(" ")
-
-                
-
                 #if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
 
                 #    print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
 
-                if(msg_sp[0]== 'get' or msg_sp[0] == 'Get') and self.model ==2:
-
+                if msg_sp[0].lower() == 'get' and self.model ==2:
                     print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
-
-                elif(msg_sp[0]== 'show-all' or msg_sp[0] == 'Show-all'):
-
-                    #
-
+                elif msg_sp[0].lower() == 'show-all':
+                    #print '[to-do]show all local replica'
+                    # @TODO[Kelsey] Why does this go out of Index?
+                    for i in data:
+                        print data[i] #print i instead
+                    continue
                 else:
-
-                    if(msg_sp[0]== 'get' or msg_sp[0] == 'Get') and self.model !=2:
-
+                    if msg_sp[0].lower() == 'get' and self.model !=2:
                         msg=msg+' '+'0'+' '+str(self.p)
-
-                    elif(msg_sp[0]== 'delete' or msg_sp[0] == 'Delete'):
-
+                    elif msg_sp[0].lower()== 'delete' or msg_sp[0].lower() == 'search':
                         msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
-
-                    elif(msg_sp[0]== 'search' or msg_sp[0] == 'Search'):
-
-                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
-
+                    # @TODO[Kelsey] Might be reason for out-of-order input processing
+                    elif msg_sp[0].lower() == 'delay':
+                        time.sleep(float(msg_sp[1]))
+                        continue
                     #maybe need to put it readline into sleep?
-
-                    elif(msg_sp[0]== 'delay' or msg_sp[0] == 'Delay'):
-
-                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
-
                     #if(msg[0]== 'Send' or msg[0] == 'send'):
-
                     #    msg_size = len(msg)
-
                     #    send_port = msg[msg_size-1]            
-
                     #    for i in range (0, msg_size-1):
-
                     #        msg[i] = msg[i+1]
-
                     #    msg[msg_size-1] = self.p
-
                     #    msg = ' '.join(msg)
-
-                
-
                     # @TODO[Kelsey] Error check without crashing program
-
                     try:
-
                         self.s_send.sendto(msg, (self.h, int(self.c)))
-
                     except socket.error, msg:
-
                         print'UDP Server Client> Error Code : ' + str(msg[0]) + 'Message' +msg[1]
-
                     #elif(msg[0]== 'Stop' or msg[0] == 'stop'):
-
                 #    print "UDP Server Client will now exit"
-
                     #    self.s_listen.close()
-
-                    #    self.s_send.close()
-
+                  #    self.s_send.close()
                     #    print "Socket closed"
-
                     #    exitFlag = True
-
                     #    break
-
                 #    sys.exit(0)
-
                    # elif(msg[0] == 'Help' or msg[0] == 'help'):
-
                    #     print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
-
                    # else: 
-
-                   #     print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
+                  #     print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
                 
         
 usc = UDPServerClient()
