@@ -32,16 +32,7 @@ class UDPServerClient:
             except IOError:
                 print "Error: can\'t find Configuration file"         
             else:
-                # @TODO[Kelsey] Presumes config file in format "CENTRAL= xxxx, correct for
-                # when central server is written
-                #central_server = file.readline()
-                #central_server = central_server.split("=")
-                #central_server = central_server[1].strip()
-                #self.c = central_server
-                #print "UDP Server Client> The UDP Server has been configured to central server:", central_server
-
                 t = file.readline()
-                
                 max_delay = file.readline()    
                 max_delay = max_delay.split("=")
                 max_delay = max_delay[1].strip()
@@ -54,12 +45,6 @@ class UDPServerClient:
                 print "UDP Server Client> The UDP Server had been configured to host:",host
 
                 t = file.readline()
-
-                #port = file.readline()    
-                #port = port.split("=")
-                #port = port[1].strip()
-                #port = port.split(",")
-
                 lastPort = file.readline()
                 t = lastPort
                 lastPort = lastPort.split('=')
@@ -93,8 +78,7 @@ class UDPServerClient:
                 msg_size = len(msg)
                 recv_port = msg[msg_size-1]
 
-                #print msg
-                mt = msg #msg.split(" ")
+                mt = msg
                 if mt[0].lower() == 'admin_model':
                     self.model = mt[1]
                     print self.model
@@ -164,7 +148,7 @@ class UDPServerClient:
                             print 'Variable %s does not exist, so no update done' % var
 
                     if (cmd == 'get') and recv_port == self.p:
-                            # @TODO[Kelsey] Check if sending back to central server is needed
+                            # @TODO[Kelsey] Send value & ack to Central Server (don't print locally)
                             if var in data:
                                 print 'Variable %s has value %s' % (var, data[var])
                             else:
@@ -203,19 +187,18 @@ class UDPServerClient:
                         msg[msg_size-1] = self.p
                         msg = ' '.join(msg)
                 
-                    # @TODO[Kelsey] Error check without crashing program
                         try:
                          self.s_send.sendto(msg, (self.h, int(send_port)))
                         except socket.error, msg:
                           print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
+                          pass
                     elif(msg[0].lower() == 'stop'):
-                        #print "UDP Server Client will now exit"
                         self.s_listen.close()
                         self.s_send.close()
                         print "Socket closed"
                         exitFlag = True
                         break
-                        #sys.exit(0)
+                        sys.exit(0)
                     elif(msg[0].lower() == 'help'):
                         print "Use the format (Send/Stop) (Message Contents) (Port Number)"
                         print "Message Contents is in format (Command) (Variable) (Value)\n"
