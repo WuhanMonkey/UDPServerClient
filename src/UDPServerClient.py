@@ -170,41 +170,130 @@ class UDPServerClient:
                 time.sleep(0.55)
               
         def send(self):
+
             global exitFlag
 
-            while True:
-                msg=raw_input('UDP Server Client> Enter message to send:\n')
-                if msg.lower() != 'send':
-                    msg = msg + ' 0 0 0'
-                msg = msg.split()
-                if msg[1].lower() == 'get' and self.model == 2:
-                    print 'Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
-                else:
-                    if(msg[0].lower() == 'send'):
-                        msg_size = len(msg)
-                        send_port = msg[msg_size-1]            
-                        for i in range (0, msg_size-1):
-                            msg[i] = msg[i+1]
-                        msg[msg_size-1] = self.p
-                        msg = ' '.join(msg)
+            input_flag = True
+
+            while input_flag:
+
+                msg=raw_input('UDP Server Client> Enter input file:')
+
+                try: 
+
+                    input_file=open(msg,'r')
+
+                except IOError:
+
+                    print "UDP Server Client> Error: can\'t find the input file" 
+
+                else: 
+
+                    input_flag = False
+
+            print "UDP Server Client> Input file load success!"
+
+            
+
                 
-                        try:
-                         self.s_send.sendto(msg, (self.h, int(send_port)))
-                        except socket.error, msg:
-                          print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
-                          pass
-                    elif(msg[0].lower() == 'stop'):
-                        self.s_listen.close()
-                        self.s_send.close()
-                        print "Socket closed"
-                        exitFlag = True
-                        break
-                        sys.exit(0)
-                    elif(msg[0].lower() == 'help'):
-                        print "Use the format (Send/Stop) (Message Contents) (Port Number)"
-                        print "Message Contents is in format (Command) (Variable) (Value)\n"
-                    else: 
-                        print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
+
+            while True:
+
+                msg = input_file.readline()
+
+                if(msg ==''):
+
+                    print 'UDP Server Client> command finished'
+
+                    break
+
+                
+
+                msg_sp = msg.split(" ")
+
+                
+
+                #if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
+
+                #    print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
+
+                if(msg_sp[0]== 'get' or msg_sp[0] == 'Get') and self.model ==2:
+
+                    print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
+
+                elif(msg_sp[0]== 'show-all' or msg_sp[0] == 'Show-all'):
+
+                    #
+
+                else:
+
+                    if(msg_sp[0]== 'get' or msg_sp[0] == 'Get') and self.model !=2:
+
+                        msg=msg+' '+'0'+' '+str(self.p)
+
+                    elif(msg_sp[0]== 'delete' or msg_sp[0] == 'Delete'):
+
+                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
+
+                    elif(msg_sp[0]== 'search' or msg_sp[0] == 'Search'):
+
+                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
+
+                    #maybe need to put it readline into sleep?
+
+                    elif(msg_sp[0]== 'delay' or msg_sp[0] == 'Delay'):
+
+                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
+
+                    #if(msg[0]== 'Send' or msg[0] == 'send'):
+
+                    #    msg_size = len(msg)
+
+                    #    send_port = msg[msg_size-1]            
+
+                    #    for i in range (0, msg_size-1):
+
+                    #        msg[i] = msg[i+1]
+
+                    #    msg[msg_size-1] = self.p
+
+                    #    msg = ' '.join(msg)
+
+                
+
+                    # @TODO[Kelsey] Error check without crashing program
+
+                    try:
+
+                        self.s_send.sendto(msg, (self.h, int(self.c)))
+
+                    except socket.error, msg:
+
+                        print'UDP Server Client> Error Code : ' + str(msg[0]) + 'Message' +msg[1]
+
+                    #elif(msg[0]== 'Stop' or msg[0] == 'stop'):
+
+                #    print "UDP Server Client will now exit"
+
+                    #    self.s_listen.close()
+
+                    #    self.s_send.close()
+
+                    #    print "Socket closed"
+
+                    #    exitFlag = True
+
+                    #    break
+
+                #    sys.exit(0)
+
+                   # elif(msg[0] == 'Help' or msg[0] == 'help'):
+
+                   #     print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
+
+                   # else: 
+
+                   #     print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
                 
         
 usc = UDPServerClient()
