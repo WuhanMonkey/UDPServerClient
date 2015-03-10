@@ -23,6 +23,7 @@ class UDPServerClient:
             self.Max_delay=None #max delay
             self.h=None #HOST
             self.c=None #central server port number
+            self.model=None #Model of connection
         
         def start(self):
             try:
@@ -80,6 +81,8 @@ class UDPServerClient:
                 #print msg
                 mt = msg #msg.split(" ")
                 if mt[0] == 'admin_model':
+                    self.model = mt[1]
+                    print self.model
                     self.c = mt[2]
                     ackMsg = 'ack ' + self.p
                     self.s_send.sendto(ackMsg, (self.h, int(self.c)))
@@ -140,7 +143,7 @@ class UDPServerClient:
                     #if cmd != 'ack' and cmd != 'Ack':
                     if cmd == 'Write' or cmd == 'write':
                             data[var] = val
-                    if cmd == 'Read' or cmd == 'read':
+                    if (cmd == 'Read' or cmd == 'read') and recv_port == self.p:
                             # @TODO[Kelsey] Check if sending back to central server is needed
                             print 'Variable %s has value %s' % (var, data[var])
                         #ackMsg = 'ack 0 ' + self.c
@@ -158,31 +161,34 @@ class UDPServerClient:
             while True:
                 msg=raw_input('UDP Server Client> Enter message to send:\n')
                 msg = msg.split()
-                if(msg[0]== 'Send' or msg[0] == 'send'):
-                    msg_size = len(msg)
-                    send_port = msg[msg_size-1]            
-                    for i in range (0, msg_size-1):
-                        msg[i] = msg[i+1]
-                    msg[msg_size-1] = self.p
-                    msg = ' '.join(msg)
+                if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
+                    print 'Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
+                else:
+                    if(msg[0]== 'Send' or msg[0] == 'send'):
+                        msg_size = len(msg)
+                        send_port = msg[msg_size-1]            
+                        for i in range (0, msg_size-1):
+                            msg[i] = msg[i+1]
+                        msg[msg_size-1] = self.p
+                        msg = ' '.join(msg)
                 
                     # @TODO[Kelsey] Error check without crashing program
-                    try:
-                        self.s_send.sendto(msg, (self.h, int(send_port)))
-                    except socket.error, msg:
-                        print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
-                elif(msg[0]== 'Stop' or msg[0] == 'stop'):
+                        try:
+                         self.s_send.sendto(msg, (self.h, int(send_port)))
+                        except socket.error, msg:
+                          print'Error Code : ' + str(msg[0]) + 'Message' +msg[1]
+                    elif(msg[0]== 'Stop' or msg[0] == 'stop'):
                 #    print "UDP Server Client will now exit"
-                    self.s_listen.close()
-                    self.s_send.close()
-                    print "Socket closed"
-                    exitFlag = True
-                    break
+                        self.s_listen.close()
+                        self.s_send.close()
+                        print "Socket closed"
+                        exitFlag = True
+                        break
                 #    sys.exit(0)
-                elif(msg[0] == 'Help' or msg[0] == 'help'):
-                    print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
-                else: 
-                    print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
+                    elif(msg[0] == 'Help' or msg[0] == 'help'):
+                        print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
+                    else: 
+                        print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
                 
         
 usc = UDPServerClient()
