@@ -6,6 +6,7 @@ import sys
 import Queue, random, time
 from threading import Timer
 from Queue import PriorityQueue
+import fileinput
 
 # Hashtable of Priority Queues, append if new host found
 msgQueue = {}
@@ -54,11 +55,24 @@ class UDPServerClient:
 
                 t = file.readline()
 
-                port = file.readline()    
-                port = port.split("=")
-                port = port[1].strip()
-                self.p = port
-                print "The UDP Server had been configured to Port:",port
+                #port = file.readline()    
+                #port = port.split("=")
+                #port = port[1].strip()
+                #port = port.split(",")
+
+                lastPort = file.readline()
+                t = lastPort
+                lastPort = lastPort.split('=')
+                lastPort = lastPort[1].strip()
+                if int(lastPort) > 9014:
+                    print "Warning: Port # exceeded 9014 and will be unnoticed by Central Server:", self.p
+                self.p = str(int(lastPort)+1)
+                print "The UDP Server had been configured to Port:",self.p
+                t = t.replace(t, 'PORT= ' + self.p)
+                s=open("config.txt", 'w')
+                t = 'PORT_NUMBER= 9029\nMAX_DELAY= 5\nHOST= localhost\nSERVER_LIST=9011,9012,9013,9014\n' + t
+                s.write(t)
+                s.close()
 
                 self.s_listen=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.s_send=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
