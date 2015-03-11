@@ -49,8 +49,8 @@ class UDPServerClient:
                 t = lastPort
                 lastPort = lastPort.split('=')
                 lastPort = lastPort[1].strip()
-                if int(lastPort) > 9003:
-                    self.p = '9001'
+                if int(lastPort) > 8182:
+                    self.p = '8180'
                 else:
                     self.p = str(int(lastPort)+1)
                 print "The UDP Server had been configured to Port:",self.p
@@ -172,6 +172,9 @@ class UDPServerClient:
                                 del data[var]
                             except KeyError:
                                 pass
+                    if cmd == 'show-all' and recv_port == self.p:                                  
+                        for i in data:
+                            print data[i] #print i instead
                 print 'UDP Server Client> Enter input file:'
             
             if exitFlag == False:
@@ -192,32 +195,34 @@ class UDPServerClient:
             print "UDP Server Client> Input file load success!"
             
             while True:
-                msg = input_file.readline()
+                msg = input_file.readline().rstrip()
                 if(msg ==''):
                     print 'UDP Server Client> command finished'
                     break
+                
                 msg_sp = msg.split(" ")
+                print msg_sp[0]
                 #if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
 
                 #    print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
 
-                if msg_sp[0].lower() == 'get' and self.model ==2:
+                if (msg_sp[0].lower() == 'get' and self.model ==2):
                     print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
-                elif msg_sp[0].lower() == 'show-all':
-                    #print '[to-do]show all local replica'
-                    # @TODO[Kelsey] Why does this go out of Index?
-                    for i in data:
-                        print data[i] #print i instead
-                    continue
+                elif (msg_sp[0].lower() == 'delay'):
+                    time.sleep(float(msg_sp[1]))
+                    #continue
                 else:
-                    if msg_sp[0].lower() == 'get' and self.model !=2:
+                    if (msg_sp[0].lower() == 'get' and self.model !=2):
                         msg=msg+' '+'0'+' '+str(self.p)
-                    elif msg_sp[0].lower()== 'delete' or msg_sp[0].lower() == 'search':
+                    elif (msg_sp[0].lower()== 'delete' or msg_sp[0].lower() == 'search'):
                         msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
+                    elif(msg_sp[0].lower()=='insert' or msg_sp[0].lower()=='update'):
+                        msg=msg+' '+str(self.p)
+                    elif (msg.lower() == 'show-all'):
+                        print '[to-do]show all local replica'
+                        msg=msg+' '+'0'+' '+'0'+' '+'0'+' '+str(self.p)
                     # @TODO[Kelsey] Might be reason for out-of-order input processing
-                    elif msg_sp[0].lower() == 'delay':
-                        time.sleep(float(msg_sp[1]))
-                        continue
+
                     #maybe need to put it readline into sleep?
                     #if(msg[0]== 'Send' or msg[0] == 'send'):
                     #    msg_size = len(msg)

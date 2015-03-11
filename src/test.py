@@ -1,12 +1,14 @@
 import socket
 import threading
 import sys
-p = 123
-msg = 'get 3'
-msg = msg+' '+str(p)
+file=open('command.txt','r')
+msg = file.readline().rstrip()
 print msg
-
-msg = msg.split()
-msg_size = len(msg)
-recv_port = msg[msg_size-1]
-print recv_port
+msg = file.readline().rstrip()
+print msg
+msg = file.readline().rstrip()
+print msg
+msg = file.readline().rstrip()
+print msg
+msg = file.readline().rstrip()
+print msg
