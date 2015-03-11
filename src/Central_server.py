@@ -5,6 +5,7 @@ import sys
 import Queue
 from threading import Thread
 
+heldAcks = {}   # Hashtable which is var : list(count, orginalClient, client1, client2, etc.)
 
 class Central_server(object):
         def __init__(self, input):        
@@ -105,6 +106,31 @@ class Central_server(object):
                     #elif(...==self.server_d): 
                         #self.counter_d = self.counter_d+1                
                 #else:          
+                
+                # Handle Acks
+                msg = message.split(" ")
+                if msg and msg[0].lower() == 'search':
+                    if msg[1] in heldAcks:
+                        try:
+                            del heldAcks[msg[1]]
+                        except KeyError:
+                            pass
+                    heldAcks[msg[1]] = [0, msg[4]]
+                elif msg and msg[0].lower() == 'ack':
+                    # ackMsg is (ack) (var) (Yes/No) (self.p)
+                    # heldAcks is var : list(count, orginalClient, client1, client2, etc.)
+                    var = msg[1]
+                    curList = heldAcks[msg[1]]
+                    curList[0] = curList[0] + 1
+                    if msg[2].lower() != 'no':
+                        curList.append(msg[3])
+                    if (curList)[0] >= 4:
+                        origPort = curList[1]
+                        del curList[0:1]
+                        searchList = 'sr ' + var + ' ' + ','.join(map(str, curList)) + ' 0 ' + origPort
+                        self._Queue.put(searchList, (self.h, int(origPort)))
+                    continue
+
                 self._Queue.put(message)
                 
                 #if(self.counter_a == 4):

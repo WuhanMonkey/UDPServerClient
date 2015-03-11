@@ -139,9 +139,12 @@ class UDPServerClient:
                     recv_port = msgTuple[3]
                     delay = msgTuple[0]
                     sysTime = msgTuple[1]
-                    print '\nReceived %s port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
 
                     msgM = msg.split(" ")
+                    #if msgM[0].lower() == 'search':
+                    #    continue
+                    print '\nReceived %s port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
+
                     #print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
 
                     # (cmd, var, val)
@@ -179,6 +182,14 @@ class UDPServerClient:
                                 print 'Var %s has value %s' % (k,v)
                             if not data:
                                 print 'Nothing stored on the local replica currently'
+                    elif cmd == 'search':
+                        if var in data:
+                            ackMsg = 'ack ' + var + ' Yes ' + self.p
+                        else:
+                            ackMsg = 'ack ' + var + ' No ' + self.p
+                        self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+                    elif cmd == 'sr':
+                        print 'Servers %s have var %s' % (val, var)
                     else:
                         print 'UDP Server Client> Enter input file:'
             
@@ -227,6 +238,8 @@ class UDPServerClient:
                         #print '[to-do]show all local replica'
                         # @TODO[Kelsey] What do you mean 'show all local replica'?
                         msg = msg + ' 0 0 0 ' + str(self.p)
+                    elif msg.lower() == 'search':
+                        msg = msg + ' 0 ' + str(self.p)
                     try:
                         self.s_send.sendto(msg, (self.h, int(self.c)))
                     except socket.error, msg:
