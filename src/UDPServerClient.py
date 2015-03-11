@@ -62,7 +62,7 @@ class UDPServerClient:
                 t4 = x.readline()
                 x.close()
                 t = t1 + t2 + t3 + t4 + t
-                print t
+                #print t
                 open('config.txt', 'w').close()
                 s=open("config.txt", 'a')
                 s.write(t)
@@ -89,10 +89,12 @@ class UDPServerClient:
                 mt = msg
                 if mt[0].lower() == 'admin_model':
                     self.model = mt[1]
-                    print self.model
+                    #print self.model
                     self.c = mt[2]
                     ackMsg = 'ack ' + self.p
                     self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+                    print '\nReceived admin_model and sent ack'
+                    continue
 
                 msg[msg_size-1]=':'
                 msg[msg_size-2]='from'
@@ -117,16 +119,15 @@ class UDPServerClient:
                 jobDelay = random.randint(0, int(self.Max_delay))
                 q.put((time.time(), counter, msg, jobDelay, recv_port))
                 # Checks the queue perodically
-                Timer(0.5, self.checkAck, ()).start()
+                Timer(0.25, self.checkAck, ()).start()
 
         def checkAck(self):
             processQueue = PriorityQueue();
             for k in msgQueue:
                 if msgQueue[k].empty() == True:
                     continue
-                q = msgQueue[k]
-                # @TODO[Kelsey] Might be here (out of order processing from input file
-                if (msgQueue[k].queue[0])[0] + (msgQueue[k].queue[0])[3] <= time.time():
+                q = msgQueue[k].queue[0]
+                if q[0] + q[3] <= time.time():
                     job = msgQueue[k].get()
                     processQueue.put((job[3], job[0], job[2], job[4]))  #randDelay, sysTime, msg, recv_port
 
@@ -138,10 +139,10 @@ class UDPServerClient:
                     recv_port = msgTuple[3]
                     delay = msgTuple[0]
                     sysTime = msgTuple[1]
-                    print 'Received %s port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
+                    print '\nReceived %s port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
 
                     msgM = msg.split(" ")
-                    print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
+                    #print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
 
                     # (cmd, var, val)
                     cmd = msgM[0].lower()
@@ -154,8 +155,7 @@ class UDPServerClient:
                             print 'Value %s written to variable %s' % (data[var], var)
                         else:
                             print 'Variable %s does not exist, so no update done' % var
-
-                    if (cmd == 'get') and recv_port == self.p:
+                    elif cmd == 'get' and recv_port == self.p:
                             # @TODO[Kelsey] Send value & ack to Central Server (don't print locally)
                             if var in data:
                                 # example code 
@@ -164,26 +164,32 @@ class UDPServerClient:
                             else:
                                 # example code
                                 # ackMsg = 'ack ' + var + ' none ' + self.c
-                                print "Var doesn't exist in local replica"
+                                print "Var %s doesn\'t exist in local replica" % var
                             #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
-                    if cmd == 'delete':
+                    elif cmd == 'delete':
                         if var in data:
                             try:
                                 del data[var]
                             except KeyError:
                                 pass
-                    if cmd == 'show-all' and recv_port == self.p:                                  
-                        for i in data:
-                            print data[i] #print i instead
-                print 'UDP Server Client> Enter input file:'
+                    elif cmd == 'show-all' and recv_port == self.p:
+                        lock = threading.RLock()
+                        with lock:
+                            for k,v in data.iteritems():
+                                print 'Var %s has value %s' % (k,v)
+                            if not data:
+                                print 'Nothing stored on the local replica currently'
+                    else:
+                        print 'UDP Server Client> Enter input file:'
             
             if exitFlag == False:
-                Timer(0.5, self.checkAck, ()).start()
-                time.sleep(0.55)
+                Timer(0.25, self.checkAck, ()).start()
+                time.sleep(0.3)
               
         def send(self):
             global exitFlag
             input_flag = True
+
             while input_flag:
                 msg=raw_input('UDP Server Client> Enter input file:')
                 try: 
@@ -192,37 +198,35 @@ class UDPServerClient:
                     print "UDP Server Client> Error: can\'t find the input file" 
                 else: 
                     input_flag = False
-            print "UDP Server Client> Input file load success!"
+            #print "UDP Server Client> Input file load success!"
             
             while True:
                 msg = input_file.readline().rstrip()
                 if(msg ==''):
-                    print 'UDP Server Client> command finished'
+                    #print 'UDP Server Client> command finished'
+                    msg = 'stop 0 0 0' + str(self.p)
                     break
                 
                 msg_sp = msg.split(" ")
-                print msg_sp[0]
+                #print msg_sp[0]
                 #if (msg[1] == 'Read' or msg[1] == 'read') and self.model == 2:
-
                 #    print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg[2], data[msg[2]])
 
                 if (msg_sp[0].lower() == 'get' and self.model ==2):
                     print 'UDP Server Client> Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
                 elif (msg_sp[0].lower() == 'delay'):
                     time.sleep(float(msg_sp[1]))
-                    #continue
+                    continue
                 else:
                     if (msg_sp[0].lower() == 'get' and self.model !=2):
-                        msg=msg+' '+'0'+' '+str(self.p)
-                    elif (msg_sp[0].lower()== 'delete' or msg_sp[0].lower() == 'search'):
-                        msg=msg+' '+'0'+' '+'0'+' '+str(self.p)
-                    elif(msg_sp[0].lower()=='insert' or msg_sp[0].lower()=='update'):
-                        msg=msg+' '+str(self.p)
+                        msg = msg + ' 0 ' + str(self.p)
+                    elif (msg_sp[0].lower() == 'delete' or msg_sp[0].lower() == 'search'):
+                        msg = msg + ' 0 0 ' + str(self.p)
+                    elif (msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update'):
+                        msg = msg + ' ' + str(self.p)
                     elif (msg.lower() == 'show-all'):
-                        print '[to-do]show all local replica'
-                        msg=msg+' '+'0'+' '+'0'+' '+'0'+' '+str(self.p)
-                    # @TODO[Kelsey] Might be reason for out-of-order input processing
-
+                        #print '[to-do]show all local replica'
+                        msg = msg + ' 0 0 0 ' + str(self.p)
                     #maybe need to put it readline into sleep?
                     #if(msg[0]== 'Send' or msg[0] == 'send'):
                     #    msg_size = len(msg)
@@ -231,23 +235,22 @@ class UDPServerClient:
                     #        msg[i] = msg[i+1]
                     #    msg[msg_size-1] = self.p
                     #    msg = ' '.join(msg)
-                    # @TODO[Kelsey] Error check without crashing program
                     try:
                         self.s_send.sendto(msg, (self.h, int(self.c)))
                     except socket.error, msg:
                         print'UDP Server Client> Error Code : ' + str(msg[0]) + 'Message' +msg[1]
                     #elif(msg[0]== 'Stop' or msg[0] == 'stop'):
-                #    print "UDP Server Client will now exit"
+                    #    print "UDP Server Client will now exit"
                     #    self.s_listen.close()
-                  #    self.s_send.close()
+                    #    self.s_send.close()
                     #    print "Socket closed"
                     #    exitFlag = True
                     #    break
-                #    sys.exit(0)
-                   # elif(msg[0] == 'Help' or msg[0] == 'help'):
-                   #     print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
-                   # else: 
-                  #     print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
+                    #    sys.exit(0)
+                    #elif(msg[0] == 'Help' or msg[0] == 'help'):
+                    #    print "Use the format (Send/Stop) (Message Contents) (Port Number)\n"
+                    #else: 
+                    #    print "Wrong command, Enter again\n UDP Server Client> Enter message to send:\n"
                 
         
 usc = UDPServerClient()
