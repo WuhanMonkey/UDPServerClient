@@ -110,24 +110,27 @@ class Central_server(object):
                 # Handle Acks
                 msg = message.split(" ")
                 if msg and msg[0].lower() == 'search':
-                    if msg[1] in heldAcks:
+                    key = ('search', msg[1])
+                    if key in heldAcks:
                         try:
-                            del heldAcks[msg[1]]
+                            del heldAcks[key]
                         except KeyError:
                             pass
-                    heldAcks[msg[1]] = [0, msg[4]]
+                    heldAcks[key] = [0, msg[4]]
                 elif msg and msg[0].lower() == 'ack':
-                    # ackMsg is (ack) (var) (Yes/No) (self.p)
+                    # ackMsg is (ack, cmd) (var) (Yes/No) (self.p)
                     # heldAcks is var : list(count, orginalClient, client1, client2, etc.)
-                    var = msg[1]
-                    curList = heldAcks[msg[1]]
+                    key = ('search', msg[1])    # Hard-coded only to work with search
+                    cmd = key[0]
+                    var = key[1]
+                    curList = heldAcks[key]
                     curList[0] = curList[0] + 1
                     if msg[2].lower() != 'no':
                         curList.append(msg[3])
                     if (curList)[0] >= 4:
                         origPort = curList[1]
                         del curList[0:1]
-                        searchList = 'sr ' + var + ' ' + ','.join(map(str, curList)) + ' 0 ' + origPort
+                        searchList = 's' + cmd + ' ' + var + ' ' + ','.join(map(str, curList)) + ' 0 ' + origPort
                         self._Queue.put(searchList, (self.h, int(origPort)))
                     continue
 

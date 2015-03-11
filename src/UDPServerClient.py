@@ -16,15 +16,15 @@ data = {}
 
 class UDPServerClient:
         def __init__(self):
-            self.s_listen=None #socket_listen
-            self.s_send=None#socket_send
-            self.t_listen=None #thread_listen
-            self.t_send=None #thread_send
-            self.p=None #port number
-            self.Max_delay=None #max delay
-            self.h=None #HOST
-            self.c=None #central server port number
-            self.model=None #Model of connection
+            self.s_listen = None    #socket_listen
+            self.s_send = None      #socket_send
+            self.t_listen = None    #thread_listen
+            self.t_send = None      #thread_send
+            self.p = None           #port number
+            self.Max_delay = None   #max delay
+            self.h = None           #HOST
+            self.c = None           #central server port number
+            self.model = None       #Model of connection
             self.lock = threading.RLock()
         
         def start(self):
@@ -69,19 +69,19 @@ class UDPServerClient:
                 s.write(t)
                 s.close()
 
-                self.s_listen=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.s_send=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.s_listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.s_send = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.s_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.s_send.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.s_listen.bind(('',int(self.p)))                
-                self.t_listen=threading.Thread(target=self.listen)
+                self.t_listen = threading.Thread(target=self.listen)
                 self.t_listen.start()
-                self.t_send=threading.Thread(target=self.send)
+                self.t_send = threading.Thread(target=self.send)
                 self.t_send.start()
         def listen(self):
             while 1:
                     #receive msg
-                msg,addr=self.s_listen.recvfrom(1024)
+                msg,addr = self.s_listen.recvfrom(1024)
                 
                 msg = msg.split()
                 msg_size = len(msg)
@@ -96,8 +96,8 @@ class UDPServerClient:
                     print '\nReceived admin_model and sent ack. Model is %s' % self.model
                     continue
 
-                msg[msg_size-1]=':'
-                msg[msg_size-2]='from'
+                msg[msg_size-1] = ':'
+                msg[msg_size-2] = 'from'
                 msg = ' '.join(msg)
 
                 if not msg:
@@ -154,8 +154,11 @@ class UDPServerClient:
 
                     if cmd == 'insert' or cmd == 'update':
                         if not (cmd == 'update' and not var in data):
-                            data[var] = val
-                            print 'Value %s written to variable %s' % (data[var], var)
+                            if var in data and (data[var])[1] > sysTime:
+                                print 'Old value had larger timestamp, no change done'
+                            else:
+                                data[var] = (val, sysTime)
+                                print 'Value %s written to variable %s' % (data[var], var)
                         else:
                             print 'Variable %s does not exist, so no update done' % var
                     elif cmd == 'get' and self.model == 1: #and recv_port == self.p:
@@ -163,7 +166,7 @@ class UDPServerClient:
                             if var in data:
                                 # example code 
                                 # ackMsg = 'ack ' + var + ' ' + data[var] + ' ' + self.c
-                                print 'Variable %s has value %s' % (var, data[var])
+                                print 'Variable %s has value %s' % (var, data[var][0])
                             else:
                                 # example code
                                 # ackMsg = 'ack ' + var + ' none ' + self.c
@@ -179,7 +182,7 @@ class UDPServerClient:
                         with self.lock:
                             print '\n'
                             for k,v in data.iteritems():
-                                print 'Var %s has value %s' % (k,v)
+                                print 'Var %s has value %s' % (k,v[0])
                             if not data:
                                 print 'Nothing stored on the local replica currently'
                     elif cmd == 'search':
@@ -188,8 +191,10 @@ class UDPServerClient:
                         else:
                             ackMsg = 'ack ' + var + ' No ' + self.p
                         self.s_send.sendto(ackMsg, (self.h, int(self.c)))
-                    elif cmd == 'sr':
+                    elif cmd == 'ssearch':
                         print 'Servers %s have var %s' % (val, var)
+                    elif cmd == 'sinsert':
+                        print "Stuff"
                     else:
                         print 'UDP Server Client> Enter input file:'
             
