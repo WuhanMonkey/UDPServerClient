@@ -131,9 +131,34 @@ class Central_server(object):
                         origPort = curList[1]
                         del curList[0:1]
                         searchList = 's' + cmd + ' ' + var + ' ' + ','.join(map(str, curList)) + ' 0 ' + origPort
+                        #[Chester] Maybe not broadcast the search result.
                         self._Queue.put(searchList, (self.h, int(origPort)))
                     continue
-
+                
+                #[Chester]identify the write model
+                #elif msg and (msg[0].lower() == 'insert' or msg[0].lower() == 'update') and (self.model != 1 or self.model !=2):
+                    #key includes ('write', key, requester port)
+                    #key = ('write', msg[1], msg[4])
+                    #if key in heldAcks:
+                    #    try:
+                    #        del heldAcks[key]
+                    #    except KeyError:
+                    #        pass
+                    #heldAcks[key] = [0, msg[4]] 
+                #elif msg and msg[0].lower() == 'write_ack':                                     
+                 #   key = ('write', msg[1], msg[4])
+                 #   curList = heldAcks[key]
+                  #  curList[0] = curList[0]+1               
+                    #handle W=1, R=1
+                   # if(msg[3] == '3' and curList[0]>=1):
+                    #    ackMsg = 'write_ack_model_3'
+                     #   self.s_send.sendto(ackMsg, (self.h, int(msg[4])))            
+                    #handle W=2, R=2
+                    #elif(msg[3] == '4' and curList[0]>=2):
+                    #    ackMsg = 'write_ack_model_4'
+                    #    self.s_send.sendto(ackMsg, (self.h, int(msg[4]))) 
+                    #continue   
+                        
                 self._Queue.put(message)
                 
                 #if(self.counter_a == 4):

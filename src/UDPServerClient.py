@@ -13,6 +13,7 @@ msgQueue = {}
 counter = 0
 exitFlag = False
 data = {}
+heldAcks = {}
 
 class UDPServerClient:
         def __init__(self):
@@ -26,6 +27,7 @@ class UDPServerClient:
             self.c = None           #central server port number
             self.model = None       #Model of connection
             self.lock = threading.RLock()
+            self.server_list = None
         
         def start(self):
             try:
@@ -45,7 +47,7 @@ class UDPServerClient:
                 self.h = host
                 print "UDP Server Client> The UDP Server had been configured to host:",host
 
-                t = file.readline()
+                self.server_list = file.readline()
                 lastPort = file.readline()
                 t = lastPort
                 lastPort = lastPort.split('=')
@@ -151,7 +153,7 @@ class UDPServerClient:
                     cmd = msgM[0].lower()
                     var = msgM[1]
                     val = msgM[2]
-
+                    #[Chester] Needs to ack with the requester port number to the central server for cmd insert and update: eg. ack_write
                     if cmd == 'insert' or cmd == 'update':
                         if not (cmd == 'update' and not var in data):
                             if var in data and (data[var])[1] > sysTime:
@@ -194,6 +196,7 @@ class UDPServerClient:
                     elif cmd == 'ssearch':
                         print 'Servers %s have var %s' % (val, var)
                     elif cmd == 'sinsert':
+                        #[Chester] modified cmd for eventual consistency insert? append requester port number in ackMsg
                         print "Stuff"
                     else:
                         print 'UDP Server Client> Enter input file:'
@@ -232,13 +235,49 @@ class UDPServerClient:
                 elif (msg_sp[0].lower() == 'delay'):
                     time.sleep(float(msg_sp[1]))
                     continue
+                elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 3 or self.model == 4)):
+                        #send to other server and wait for write_ack.
+                    print "write model 3 or 4"
+                    key = ('write', msg_sp[1])
+                    if key in heldAcks:
+                        try:
+                            del heldAcks[key]
+                        except KeyError:
+                            pass
+                    heldAcks[key] = [0, self.p]
+                    msg = msg + ' ' + str(self.p)
+                    for s in self.server_list:
+                        if(s!=self.p):
+                            self.s_send.sendto(msg, (self.h, int(s)))
+                    continue
+                elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)): 
+                    print "get model 3 or 4"
+                    key = ('get', msg_sp[1])
+                    if key in heldAcks:
+                        try:
+                            del heldAcks[key]
+                        except KeyError:
+                            pass
+                    heldAcks[key] = [0, self.p]
+                    msg = msg+ ' '+ str(self.p)
+                    for s in self.server_list:
+                        if(s!=self.p):
+                            self.s_send.sendto(msg, (self.h, int(s)))                
+                    continue
+                
+                
                 else:
-                    if (msg_sp[0].lower() == 'get' and self.model != 2):
+                    #[Chester] Needs to adapt to the model
+                    if (msg_sp[0].lower() == 'get' and self.model == 1):
                         msg = msg + ' 0 ' + str(self.p)
+                    #[Chester] get cmd adapt to model 3 and 4.    
+
                     elif (msg_sp[0].lower() == 'delete' or msg_sp[0].lower() == 'search'):
                         msg = msg + ' 0 0 ' + str(self.p)
-                    elif (msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update'):
+                    #[Chester] Needs to adapt to the model, handle on receive side.  
+                    elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 1 or self.model == 2)):
                         msg = msg + ' ' + str(self.p)
+                                  
                     elif (msg.lower() == 'show-all'):
                         #print '[to-do]show all local replica'
                         # @TODO[Kelsey] What do you mean 'show all local replica'?
