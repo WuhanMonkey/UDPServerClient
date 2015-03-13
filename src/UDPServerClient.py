@@ -247,7 +247,6 @@ class UDPServerClient:
                     heldAcks[key] = [0, self.p]
                     msg = msg + ' ' + str(self.p)
                     for s in self.server_list:
-                        if(s!=self.p):
                             self.s_send.sendto(msg, (self.h, int(s)))
                     continue
                 elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)): 
@@ -261,7 +260,6 @@ class UDPServerClient:
                     heldAcks[key] = [0, self.p]
                     msg = msg+ ' '+ str(self.p)
                     for s in self.server_list:
-                        if(s!=self.p):
                             self.s_send.sendto(msg, (self.h, int(s)))                
                     continue
                 
