@@ -208,85 +208,86 @@ class UDPServerClient:
         def send(self):
             global exitFlag
             input_flag = True
-
-            while input_flag:
-                msg = raw_input('UDP Server Client> Enter input file:')
-                try: 
-                    input_file = open(msg,'r')
-                except IOError:
-                    print "UDP Server Client> Error: can\'t find the input file" 
-                else: 
-                    input_flag = False
+            while(True):
+                while input_flag:
+                    msg = raw_input('UDP Server Client> Enter input file:')
+                    try: 
+                        input_file = open(msg,'r')
+                    except IOError:
+                        print "UDP Server Client> Error: can\'t find the input file" 
+                    else: 
+                        input_flag = False
             #print "UDP Server Client> Input file load success!"
             
-            while True:
-                msg = input_file.readline().rstrip()
-                if msg == '':
-                    break
+                while True:
+                    msg = input_file.readline().rstrip()
+                    if msg == '':
+                        input_flag =True
+                        break
                 
-                msg_sp = msg.split(" ")
+                    msg_sp = msg.split(" ")
 
-                if (msg_sp[0].lower() == 'get' and self.model == 2):
-                    print 'Received get %s in Model %s mode' % (msg_sp[1],self.model)
-                    try:
-                        print 'Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
-                    except KeyError:
-                        print "Var %s doesn\'t exist in local replica" % msg_sp[1]
-                elif (msg_sp[0].lower() == 'delay'):
-                    time.sleep(float(msg_sp[1]))
-                    continue
-                elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 3 or self.model == 4)):
+                    if (msg_sp[0].lower() == 'get' and self.model == 2):
+                        print 'Received get %s in Model %s mode' % (msg_sp[1],self.model)
+                        try:
+                            print 'Variable %s has value %s, SEQ' % (msg_sp[1], data[msg_sp[1]])
+                        except KeyError:
+                            print "Var %s doesn\'t exist in local replica" % msg_sp[1]
+                    elif (msg_sp[0].lower() == 'delay'):
+                        time.sleep(float(msg_sp[1]))
+                        continue
+                    elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 3 or self.model == 4)):
                         #send to other server and wait for write_ack.
-                    print "write model 3 or 4"
-                    key = ('write', msg_sp[1])
-                    if key in heldAcks:
-                        try:
-                            del heldAcks[key]
-                        except KeyError:
-                            pass
-                    heldAcks[key] = [0, self.p]
-                    sysTime = time.time()
-                    msg = msg + ' ' + str(self.p)+ ' '+ sysTime
-                    for s in self.server_list:
+                        print "write model 3 or 4"
+                        key = ('write', msg_sp[1])
+                        if key in heldAcks:
+                            try:
+                                del heldAcks[key]
+                            except KeyError:
+                                pass
+                        heldAcks[key] = [0, self.p]
+                        sysTime = time.time()
+                        msg = msg + ' ' + str(self.p)+ ' '+ sysTime
+                        for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))
-                    continue
-                elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)): 
-                    print "get model 3 or 4"
-                    key = ('get', msg_sp[1])
-                    if key in heldAcks:
-                        try:
-                            del heldAcks[key]
-                        except KeyError:
-                            pass
-                    heldAcks[key] = [0, self.p]
-                    msg = msg+ ' '+ str(self.p)
-                    for s in self.server_list:
+                        continue
+                    elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)): 
+                        print "get model 3 or 4"
+                        key = ('get', msg_sp[1])
+                        if key in heldAcks:
+                            try:
+                                del heldAcks[key]
+                            except KeyError:
+                                pass
+                        heldAcks[key] = [0, self.p]
+                        msg = msg+ ' '+ str(self.p)
+                        for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))                
-                    continue
+                        continue
                 
                 
-                else:
+                    else:
                     #[Chester] Needs to adapt to the model
-                    if (msg_sp[0].lower() == 'get' and self.model == 1):
-                        msg = msg + ' 0 ' + str(self.p)
+                        if (msg_sp[0].lower() == 'get' and self.model == 1):
+                            msg = msg + ' 0 ' + str(self.p)
                     #[Chester] get cmd adapt to model 3 and 4.    
 
-                    elif (msg_sp[0].lower() == 'delete' or msg_sp[0].lower() == 'search'):
-                        msg = msg + ' 0 0 ' + str(self.p)
+                        elif (msg_sp[0].lower() == 'delete' or msg_sp[0].lower() == 'search'):
+                            msg = msg + ' 0 0 ' + str(self.p)
                     #[Chester] Needs to adapt to the model, handle on receive side.  
-                    elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 1 or self.model == 2)):
-                        msg = msg + ' ' + str(self.p)
+                        elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 1 or self.model == 2)):
+                            msg = msg + ' ' + str(self.p)
                                   
-                    elif (msg.lower() == 'show-all'):
+                        elif (msg.lower() == 'show-all'):
                         #print '[to-do]show all local replica'
                         # @TODO[Kelsey] What do you mean 'show all local replica'?
-                        msg = msg + ' 0 0 0 ' + str(self.p)
-                    elif msg.lower() == 'search':
-                        msg = msg + ' 0 ' + str(self.p)
-                    try:
-                        self.s_send.sendto(msg, (self.h, int(self.c)))
-                    except socket.error, msg:
-                        print'UDP Server Client> Error Code : ' + str(msg[0]) + 'Message' +msg[1]
+                            msg = msg + ' 0 0 0 ' + str(self.p)
+                        elif msg.lower() == 'search':
+                            msg = msg + ' 0 ' + str(self.p)
+                        try:
+                            self.s_send.sendto(msg, (self.h, int(self.c)))
+                        except socket.error, msg:
+                            print'UDP Server Client> Error Code : ' + str(msg[0]) + 'Message' +msg[1]
                     #elif(msg[0]== 'Stop' or msg[0] == 'stop'):
                     #    print "UDP Server Client will now exit"
                     #    self.s_listen.close()
