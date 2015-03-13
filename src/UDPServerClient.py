@@ -245,7 +245,8 @@ class UDPServerClient:
                         except KeyError:
                             pass
                     heldAcks[key] = [0, self.p]
-                    msg = msg + ' ' + str(self.p)
+                    sysTime = time.time()
+                    msg = msg + ' ' + str(self.p)+ ' '+ sysTime
                     for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))
                     continue
