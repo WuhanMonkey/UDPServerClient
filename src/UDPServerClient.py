@@ -247,7 +247,7 @@ class UDPServerClient:
                                 pass
                         heldAcks[key] = [0, self.p]
                         sysTime = time.time()
-                        msg = msg + ' ' + str(self.p)+ ' '+ sysTime
+                        msg = msg + ' ' + str(self.p)
                         for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))
                         continue

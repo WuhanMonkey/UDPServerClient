@@ -4,6 +4,7 @@ import threading
 import sys
 import Queue
 from threading import Thread
+import time
 
 heldAcks = {}   # Hashtable which is var : list(count, orginalClient, client1, client2, etc.)
 
@@ -176,7 +177,19 @@ class Central_server(object):
                 
                 
         def send(self):
+            sysTime = 0;
+            sysTime2= 0;
             while True:
+                sysTime2 = round(time.time())
+                if(sysTime == sysTime2):
+                    pass
+                else:
+                    sysTime = sysTime2
+                if(sysTime % 5 == 0):
+                    pass
+                    #repair
+                
+                
                 try:
                     message = self._Queue.get()
                 except:
