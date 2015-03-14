@@ -118,6 +118,11 @@ class Central_server(object):
                         except KeyError:
                             pass
                     heldAcks[key] = [0, msg[4]]
+               # elif msg and msg[0].lower() == 'arepair':
+               #     pass
+                    #[TO-DO] Chester, interpretate the msg, compare the timestamp. 
+                
+                
                 elif msg and msg[0].lower() == 'ack':
                     # ackMsg is (ack, cmd) (var) (Yes/No) (self.p)
                     # heldAcks is var : list(count, orginalClient, client1, client2, etc.)
@@ -177,27 +182,29 @@ class Central_server(object):
                 
                 
         def send(self):
-            sysTime = 0;
-            sysTime2= 0;
+            #sysTime = 0;
+            #sysTime2= 0;
             while True:
-                sysTime2 = round(time.time())
-                if(sysTime == sysTime2):
-                    pass
-                else:
-                    sysTime = sysTime2
-                if(sysTime % 5 == 0):
-                    pass
-                    #repair
-                
-                
-                try:
-                    message = self._Queue.get()
-                except:
-                    continue
-                if message:
-                    for s in self.server_list:
-                        self.s_send.sendto(message, (self.h, int(s)))
-                
+            #    sysTime2 = round(time.time())
+            #    if(sysTime == sysTime2):
+            #        pass
+            #    else:
+            #        sysTime = sysTime2
+            #        if(sysTime % 5 == 0 and (self.model == 3 or self.model == 4)):
+            #            print "inconsistency repair started on %s" % sysTime
+            #            msg = 'repair 0 0 0 '+self.p
+            #            for s in self.server_list:
+            #                self.s_send.sendto(msg, (self.h, int(s)))
+            #            continue
+                        #repair                
+                        try:
+                            message = self._Queue.get()
+                        except:
+                            continue
+                        if message:
+                            for s in self.server_list:
+                                self.s_send.sendto(message, (self.h, int(s)))
+                    
 
 if __name__ == '__main__':   
     if len(sys.argv) <2:
