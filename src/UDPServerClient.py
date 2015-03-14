@@ -56,8 +56,8 @@ class UDPServerClient:
                 t = lastPort
                 lastPort = lastPort.split('=')
                 lastPort = lastPort[1].strip()
-                if int(lastPort) > 8182:
-                    self.p = '8180'
+                if int(lastPort) > 8246:
+                    self.p = '8244'
                 else:
                     self.p = str(int(lastPort)+1)
                 print "The UDP Server had been configured to Port:",self.p
@@ -125,17 +125,20 @@ class UDPServerClient:
                 jobDelay = random.randint(0, int(self.Max_delay))
                 q.put((time.time(), counter, msg, jobDelay, recv_port))
                 # Checks the queue perodically
-                Timer(0.25, self.checkAck, ()).start()
+                Timer(0.5, self.checkAck, ()).start()
  
         def checkAck(self):
             processQueue = PriorityQueue();
-            for k in msgQueue:
-                if msgQueue[k].empty() == True:
-                    continue
-                q = msgQueue[k].queue[0]
-                if q[0] + q[3] <= time.time():
-                    job = msgQueue[k].get()
-                    processQueue.put((job[3], job[0], job[2], job[4]))  #randDelay, sysTime, msg, recv_port
+            try:
+                for k in msgQueue:
+                    if msgQueue[k].empty() == True:
+                        continue
+                    q = msgQueue[k].queue[0]
+                    if q[0] + q[3] <= time.time():
+                        job = msgQueue[k].get()
+                        processQueue.put((job[3], job[0], job[2], job[4]))  #randDelay, sysTime, msg, recv_port
+            except RuntimeError:
+                pass
  
             if processQueue.qsize() > 0:
                 while processQueue.empty() == False:
@@ -192,12 +195,13 @@ class UDPServerClient:
                             curList = heldAcks[key]
                             curList[0] = curList[0] + 1
                             print curList[0]
-                            if msgM[3] == '3' and curList[0] >= 1:
+                            if (msgM[3] == '3' and curList[0] >= 1) or (msgM[3] =='4' and curList[0] >=2):
                                 print 'The %s %s %s reqest has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],msgM[3],curList[0])
-                                del heldAcks[key]
-                            elif(msgM[3] =='4' and curList[0] >=2):
-                                print 'The %s %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],msgM[3],curList[0])
-                                del heldAcks[key]
+                                if key in heldAcks:
+                                    try:
+                                        del heldAcks[key]
+                                    except KeyError:
+                                        pass
                     elif cmd == 'get':
                         if self.model == 1:
                             if var in data:
@@ -206,11 +210,12 @@ class UDPServerClient:
                                 print 'Var %s doesn\'t exist in local replica' % var
                         if model > 2:
                             if var in data:
-                                getAck = 'aget' + ' ' + var + ' ' + model + ' ' + self.p
+                                getAck = 'aget ' + var + ' ' + model + ' ' + str(data[var][0]) + ' ' + str(data[var][1]) + ' ' + self.p
                             else:
-                                getAck = 'aget' + ' ' + var + ' ' + model + ' ' + self.p
-                        self.s_send.sendto(getAck, (self.h, int(self.c)))
+                                getAck = 'aget ' + var + ' ' + model + ' none 0 ' + self.p
+                        self.s_send.sendto(getAck, (self.h, int(recv_port)))
                     elif cmd == 'aget':
+                        # (get) (var) (model) (val) (timestamp) 
                         key = ('get', msgM[1], msgM[2])
                         if key in heldAcks:
                             model = msgM[2]
@@ -218,13 +223,33 @@ class UDPServerClient:
                             curList = heldAcks[key]
                             curList[0] = curList[0] + 1
                             print curList[0]
-                            if (msgM[2] == '3' and curList[0] >= 1) or (msgM[2] == '4' and curList[0] >= 2):
+
+                            if not(msg[4] == curList[2]) or not(msg[3] == curList[1]):
+                            #if msg[4] > curList[2]:
+                                curList[2] = msg[4] # Timestamp
+                                curList[1] = msg[3] # Value
+                            #if msg[4] != curList[2]:
+                                curList[3] = curList[3] + 1 # Counter
+
+                            if (msgM[2] == '3' and curList[0] == 1) or (msgM[2] == '4' and curList[0] == 2):
                                 print 'The %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],curList[0])
                                 if var in data:
                                     print 'Variable %s has value %s' % (var, data[var][0])
                                 else:
                                     print 'Var %s doesn\'t exist in local replica' % var
-                                del heldAcks[key]
+                            elif curList[0] >= 4:
+                                if curList[3] > 0:
+                                    print 'Inconsistency in %s detected, sending repair messages', msgM[1]
+                                    repair = 'insert ' + msgM[1] + ' ' + curList[1] + ' ' + model + ' ' + self.p
+                                    for s in self.server_list:
+                                        self.s_send.sendto(repair, (self.h, int(s)))
+                                else:
+                                    print 'No inconsistency detected'
+                                if key in heldAcks:
+                                    try:
+                                        del heldAcks[key]
+                                    except KeyError:
+                                        pass
                     elif cmd == 'delete':
                         if var in data:
                             with self.lock:
@@ -250,8 +275,8 @@ class UDPServerClient:
                     print 'UDP Server Client> Enter input file:'
            
             if exitFlag == False:
-                Timer(0.25, self.checkAck, ()).start()
-                time.sleep(0.3)
+                Timer(0.5, self.checkAck, ()).start()
+                time.sleep(0.55)
              
         def send(self):
             global exitFlag
@@ -307,7 +332,7 @@ class UDPServerClient:
                                 del heldAcks[key]
                             except KeyError:
                                 pass
-                        heldAcks[key] = [0, self.p]
+                        heldAcks[key] = [0, msg_sp[1], 0.0, -1, self.p]
                         msg = msg + ' '+ str(self.p)
                         for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))                
