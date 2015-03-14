@@ -2,19 +2,19 @@
 import socket
 import threading
 import sys
-
+ 
 import Queue, random, time
 from threading import Timer
 from Queue import PriorityQueue
 import fileinput
-
+ 
 # Hashtable of Priority Queues, append if new host found
 msgQueue = {}
 counter = 0
 exitFlag = False
 data = {}
 heldAcks = {}
-
+ 
 class UDPServerClient:
         def __init__(self):
             self.s_listen = None    #socket_listen
@@ -28,13 +28,12 @@ class UDPServerClient:
             self.model = None       #Model of connection
             self.lock = threading.RLock()
             self.server_list = None
-            
-        
+       
         def start(self):
             try:
                 file = open("config.txt", 'r')
             except IOError:
-                print "Error: can\'t find Configuration file"         
+                print "Error: can\'t find Configuration file"        
             else:
                 t = file.readline()
                 max_delay = file.readline()    
@@ -47,19 +46,18 @@ class UDPServerClient:
                 host = host[1].strip()
                 self.h = host
                 print "UDP Server Client> The UDP Server had been configured to host:",host
-
+ 
                 self.server_list = file.readline()
-                servers = self.server_list.split("=")
-                self.server_list = servers[1]
+                self.server_list = self.server_list.split("=")
+                self.server_list = self.server_list[1]
                 self.server_list = self.server_list.split(",")
-                
-                
+ 
                 lastPort = file.readline()
                 t = lastPort
                 lastPort = lastPort.split('=')
                 lastPort = lastPort[1].strip()
-                if int(lastPort) > 8238:
-                    self.p = '8236'
+                if int(lastPort) > 8182:
+                    self.p = '8180'
                 else:
                     self.p = str(int(lastPort)+1)
                 print "The UDP Server had been configured to Port:",self.p
@@ -76,7 +74,7 @@ class UDPServerClient:
                 s=open("config.txt", 'a')
                 s.write(t)
                 s.close()
-
+ 
                 self.s_listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.s_send = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.s_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -90,11 +88,11 @@ class UDPServerClient:
             while 1:
                     #receive msg
                 msg,addr = self.s_listen.recvfrom(1024)
-                
+               
                 msg = msg.split()
                 msg_size = len(msg)
                 recv_port = msg[msg_size-1]
-
+ 
                 mt = msg
                 if mt[0].lower() == 'admin_model':
                     self.model = int(mt[1])
@@ -103,32 +101,32 @@ class UDPServerClient:
                     self.s_send.sendto(ackMsg, (self.h, int(self.c)))
                     print '\nReceived admin_model and sent ack. Model is %s' % self.model
                     continue
-
+ 
                 #msg[msg_size-1] = ':'
                 #msg[msg_size-2] = 'from'
                 msg = ' '.join(msg)
-
+ 
                 if not msg:
                     break
-
+ 
                 global msgQueue # Hashtable of Priority Queues
                 global counter
                 global exitFlag
                 global data     # Hashtable for Data w/ key = var
-
+ 
                 # Do not handle until popped off of priority queue
                 if msgQueue.get(recv_port) == None:
                     q = PriorityQueue()
                     msgQueue[recv_port] = q
                 else:
                     q = msgQueue[recv_port]
-
+ 
                 counter+=1
                 jobDelay = random.randint(0, int(self.Max_delay))
                 q.put((time.time(), counter, msg, jobDelay, recv_port))
                 # Checks the queue perodically
                 Timer(0.25, self.checkAck, ()).start()
-
+ 
         def checkAck(self):
             processQueue = PriorityQueue();
             for k in msgQueue:
@@ -138,7 +136,7 @@ class UDPServerClient:
                 if q[0] + q[3] <= time.time():
                     job = msgQueue[k].get()
                     processQueue.put((job[3], job[0], job[2], job[4]))  #randDelay, sysTime, msg, recv_port
-
+ 
             if processQueue.qsize() > 0:
                 while processQueue.empty() == False:
                     msgTuple = processQueue.get()
@@ -147,21 +145,23 @@ class UDPServerClient:
                     recv_port = msgTuple[3]
                     delay = msgTuple[0]
                     sysTime = msgTuple[1]
+ 
                     msgM = msg.split(" ")
                     #if msgM[0].lower() == 'search':
                     #    continue
+                    #if not(msgM[0].lower() != 'aget' or msgM[0].lower() != 'ssearch' or msgM[0].lower() != 'aupdate' or msgM[0].lower() != 'ainsert'):
                     print '\nReceived %s from port %s, Job delay is %s, Sys Time is %s' % (msg, recv_port, delay, sysTime) #self.Max_delay
-
+ 
                     #print '0: %s, 1: %s, 2: %s' % (msgM[0], msgM[1], msgM[2])
-
+ 
                     # (cmd, var, val)
                     cmd = msgM[0].lower()
                     var = msgM[1]
-                    if(cmd == 'get'):
+                    if cmd == 'get':
                         model = msgM[2]
                     else:
                         val = msgM[2]
-                    if(cmd == 'insert' or cmd == 'update'):
+                    if cmd == 'insert' or cmd == 'update':
                         model = msgM[3]
                     #[Chester] Needs to ack with the requester port number to the central server for cmd insert and update: eg. ack_write
                     if cmd == 'insert' or cmd == 'update':
@@ -173,49 +173,65 @@ class UDPServerClient:
                                 print 'Value %s written to variable %s' % (data[var], var)
                         else:
                             print 'Variable %s does not exist, so no update done' % var
-                        if(model>2):
+ 
+                        if model > 2:
                             if cmd == 'insert':
-                                insert_ack = 'ainsert'+' '+var+' '+val+' '+model+' '+ self.p
+                                insert_ack = 'ainsert' + ' ' + var + ' '  + val + ' ' + model + ' ' + self.p
                                 self.s_send.sendto(insert_ack, (self.h, int(recv_port)))
                             if cmd == 'update':
-                                update_ack = 'aupdate'+' '+var+' '+val+' '+model+' '+ self.p
+                                update_ack = 'aupdate' + ' ' + var + ' ' + val + ' ' + model + ' ' + self.p
                                 self.s_send.sendto(update_ack, (self.h, int(recv_port)))
-                    
                     elif cmd == 'ainsert' or cmd == 'aupdate':
-                        if(cmd == 'ainsert'):
+                        if cmd == 'ainsert':
                             key = ('insert', msgM[1], msgM[2], msgM[3])
                         else:
                             key = ('update', msgM[1], msgM[2], msgM[3])
                         if key in heldAcks:
                             model = msgM[3]
                             print cmd + model
-                            curList= heldAcks[key]
+                            curList = heldAcks[key]
                             curList[0] = curList[0] + 1
-                            print curList[0]                   
-                            if(msgM[3]=='3' and curList[0]>=1):
+                            print curList[0]
+                            if msgM[3] == '3' and curList[0] >= 1:
+                                print 'The %s %s %s reqest has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],msgM[3],curList[0])
+                                del heldAcks[key]
+                            elif(msgM[3] =='4' and curList[0] >=2):
                                 print 'The %s %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],msgM[3],curList[0])
                                 del heldAcks[key]
-                            elif(msgM[3]=='4' and curList[0]>=2):
-                                print 'The %s %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],msgM[3],curList[0])
-                                del heldAcks[key]
-                                
-                    elif cmd == 'get' and self.model == 1: #and recv_port == self.p:
-                            # @TODO[Kelsey] Send value & ack to Central Server (don't print locally)
+                    elif cmd == 'get':
+                        if self.model == 1:
                             if var in data:
-                                # example code 
-                                # ackMsg = 'ack ' + var + ' ' + data[var] + ' ' + self.c
                                 print 'Variable %s has value %s' % (var, data[var][0])
                             else:
-                                # example code
-                                # ackMsg = 'ack ' + var + ' none ' + self.c
-                                print "Var %s doesn\'t exist in local replica" % var
-                            #self.s_send.sendto(ackMsg, (self.h, int(self.c)))
+                                print 'Var %s doesn\'t exist in local replica' % var
+                        if model > 2:
+                            if var in data:
+                                getAck = 'aget' + ' ' + var + ' ' + model + ' ' + self.p
+                            else:
+                                getAck = 'aget' + ' ' + var + ' ' + model + ' ' + self.p
+                        self.s_send.sendto(getAck, (self.h, int(self.c)))
+                    elif cmd == 'aget':
+                        key = ('get', msgM[1], msgM[2])
+                        if key in heldAcks:
+                            model = msgM[2]
+                            print cmd + model
+                            curList = heldAcks[key]
+                            curList[0] = curList[0] + 1
+                            print curList[0]
+                            if (msgM[2] == '3' and curList[0] >= 1) or (msgM[2] == '4' and curList[0] >= 2):
+                                print 'The %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],curList[0])
+                                if var in data:
+                                    print 'Variable %s has value %s' % (var, data[var][0])
+                                else:
+                                    print 'Var %s doesn\'t exist in local replica' % var
+                                del heldAcks[key]
                     elif cmd == 'delete':
                         if var in data:
-                            try:
-                                del data[var]
-                            except KeyError:
-                                pass
+                            with self.lock:
+                                try:
+                                    del data[var]
+                                except KeyError:
+                                    pass
                     elif cmd == 'show-all' and recv_port == self.p:
                         with self.lock:
                             print '\n'
@@ -230,35 +246,35 @@ class UDPServerClient:
                             ackMsg = 'ack ' + var + ' No ' + self.p
                         self.s_send.sendto(ackMsg, (self.h, int(self.c)))
                     elif cmd == 'ssearch':
-                        print 'Servers %s have var %s' % (val, var)                   
+                        print 'Servers %s have var %s' % (val, var)
                     print 'UDP Server Client> Enter input file:'
-            
+           
             if exitFlag == False:
                 Timer(0.25, self.checkAck, ()).start()
                 time.sleep(0.3)
-              
+             
         def send(self):
             global exitFlag
             input_flag = True
             while(True):
                 while input_flag:
                     msg = raw_input('UDP Server Client> Enter input file:')
-                    try: 
+                    try:
                         input_file = open(msg,'r')
                     except IOError:
-                        print "UDP Server Client> Error: can\'t find the input file" 
-                    else: 
+                        print "UDP Server Client> Error: can\'t find the input file"
+                    else:
                         input_flag = False
             #print "UDP Server Client> Input file load success!"
-            
+           
                 while True:
                     msg = input_file.readline().rstrip()
                     if msg == '':
                         input_flag =True
                         break
-                
+               
                     msg_sp = msg.split(" ")
-
+ 
                     if (msg_sp[0].lower() == 'get' and self.model == 2):
                         print 'Received get %s in Model %s mode' % (msg_sp[1],self.model)
                         try:
@@ -270,7 +286,7 @@ class UDPServerClient:
                         continue
                     elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 3 or self.model == 4)):
                         #send to other server and wait for write_ack.
-                        if(msg_sp[0].lower() =='insert'):
+                        if msg_sp[0].lower() == 'insert':
                             key = ('insert', msg_sp[1], msg_sp[2], msg_sp[3])
                         else:
                             key = ('update', msg_sp[1], msg_sp[2], msg_sp[3])
@@ -280,38 +296,36 @@ class UDPServerClient:
                             except KeyError:
                                 pass
                         heldAcks[key] = [0, self.p]
-                        #sysTime = time.time()
                         msg = msg + ' ' + str(self.p)
                         for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))
                         continue
-                    elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)): 
-
-                        key = ('get', msg_sp[1])
+                    elif(msg_sp[0].lower() == 'get' and (self.model == 3 or self.model == 4)):
+                        key = ('get', msg_sp[1], msg_sp[2])
                         if key in heldAcks:
                             try:
                                 del heldAcks[key]
                             except KeyError:
                                 pass
                         heldAcks[key] = [0, self.p]
-                        msg = msg+ ' '+ str(self.p)
+                        msg = msg + ' '+ str(self.p)
                         for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))                
                         continue
-                
-                
+               
+               
                     else:
                     #[Chester] Needs to adapt to the model
                         if (msg_sp[0].lower() == 'get' and self.model == 1):
                             msg = msg + ' 0 ' + str(self.p)
                     #[Chester] get cmd adapt to model 3 and 4.    
-
+ 
                         elif (msg_sp[0].lower() == 'delete' or msg_sp[0].lower() == 'search'):
                             msg = msg + ' 0 0 ' + str(self.p)
                     #[Chester] Needs to adapt to the model, handle on receive side.  
                         elif((msg_sp[0].lower() =='insert' or msg_sp[0].lower() =='update') and (self.model == 1 or self.model == 2)):
                             msg = msg + ' ' + str(self.p)
-                                  
+                                 
                         elif (msg.lower() == 'show-all'):
                         #print '[to-do]show all local replica'
                         # @TODO[Kelsey] What do you mean 'show all local replica'?
@@ -330,8 +344,8 @@ class UDPServerClient:
                     #    exitFlag = True
                     #    break
                     #    sys.exit(0)
-                
-        
+               
+       
 usc = UDPServerClient()
 sys.stdout.write("UDP Server Client> ")
 usc.start()
