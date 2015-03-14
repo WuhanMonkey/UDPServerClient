@@ -219,17 +219,16 @@ class UDPServerClient:
                         key = ('get', msgM[1], msgM[2])
                         if key in heldAcks:
                             model = msgM[2]
-                            print cmd + model
+                            #print cmd + ' ' + model
                             curList = heldAcks[key]
                             curList[0] = curList[0] + 1
-                            print curList[0]
-
-                            if not(msg[4] == curList[2]) or not(msg[3] == curList[1]):
-                            #if msg[4] > curList[2]:
-                                curList[2] = msg[4] # Timestamp
-                                curList[1] = msg[3] # Value
-                            #if msg[4] != curList[2]:
-                                curList[3] = curList[3] + 1 # Counter
+                            #print curList
+                            #print msgM[4]
+                            if not(msgM[4] == curList[2]) or not(msgM[3] == curList[1]):
+                                curList[3] = curList[3] + 1
+                            if msgM[4] > curList[2]:
+                                curList[2] = msgM[4] # Timestamp
+                                curList[1] = msgM[3] # Value
 
                             if (msgM[2] == '3' and curList[0] == 1) or (msgM[2] == '4' and curList[0] == 2):
                                 print 'The %s %s request has been done on model %s, the ack_number is %s' %(key[0], msgM[1], msgM[2],curList[0])
@@ -239,7 +238,7 @@ class UDPServerClient:
                                     print 'Var %s doesn\'t exist in local replica' % var
                             elif curList[0] >= 4:
                                 if curList[3] > 0:
-                                    print 'Inconsistency in %s detected, sending repair messages', msgM[1]
+                                    print 'Inconsistency in %s detected, sending repair messages' % (msgM[1])
                                     repair = 'insert ' + msgM[1] + ' ' + curList[1] + ' ' + model + ' ' + self.p
                                     for s in self.server_list:
                                         self.s_send.sendto(repair, (self.h, int(s)))
@@ -332,7 +331,7 @@ class UDPServerClient:
                                 del heldAcks[key]
                             except KeyError:
                                 pass
-                        heldAcks[key] = [0, msg_sp[1], 0.0, -1, self.p]
+                        heldAcks[key] = [0, msg_sp[1], 0, -1, self.p]
                         msg = msg + ' '+ str(self.p)
                         for s in self.server_list:
                             self.s_send.sendto(msg, (self.h, int(s)))                
